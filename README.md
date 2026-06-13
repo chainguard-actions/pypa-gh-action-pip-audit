@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v1.0.6 | [`v1.0.6`](https://github.com/chainguard-actions/pypa-gh-action-pip-audit/tree/v1.0.6) | [`75edeac`](https://github.com/pypa/gh-action-pip-audit/commit/75edeacda5c87f955b25c88b8582b10b9cd1ebc5) |
 | v1.1.0 | [`v1.1.0`](https://github.com/chainguard-actions/pypa-gh-action-pip-audit/tree/v1.1.0) | [`1220774`](https://github.com/pypa/gh-action-pip-audit/commit/1220774d901786e6f652ae159f7b6bc8fea6d266) |
 
 ## Privacy
