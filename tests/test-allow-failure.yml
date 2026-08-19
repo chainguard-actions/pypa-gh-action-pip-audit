@@ -1,0 +1,28 @@
+name: Test pip-audit allow-failure flag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a requirements file with a known-vulnerable package
+        run: |
+          # Use a very old version of pip that has known vulnerabilities
+          cat > /tmp/vuln-requirements.txt <<'EOF'
+          pip==21.1
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/vuln-requirements.txt
+          no-deps: "true"
+          summary: "false"
+          internal-be-careful-allow-failure: "true"
+
+      - name: Assert action completed (allow-failure means it should not exit 1)
+        run: |
+          echo "pip-audit completed with allow-failure=true even if vulnerabilities were found"
+          echo "PASS"

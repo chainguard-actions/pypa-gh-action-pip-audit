@@ -1,0 +1,27 @@
+name: Test basic pip-audit usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a clean requirements file
+        run: |
+          cat > /tmp/test-requirements.txt <<'EOF'
+          # empty requirements - no packages to audit
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/test-requirements.txt
+          no-deps: "true"
+          summary: "false"
+          internal-be-careful-allow-failure: "false"
+
+      - name: Assert action succeeded
+        run: |
+          echo "pip-audit completed successfully on clean requirements"
+          echo "PASS"

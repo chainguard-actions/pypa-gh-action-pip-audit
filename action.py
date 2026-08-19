@@ -49,7 +49,7 @@ def _fatal_help(msg):
     sys.exit(1)
 
 
-inputs = [Path(p).resolve() for p in sys.argv[1].split()]
+inputs = [Path(p).resolve() for p in os.getenv("GHA_PIP_AUDIT_INPUTS", "").split()]
 
 # The arguments we pass into `pip-audit` get built up in this list.
 pip_audit_args = [
