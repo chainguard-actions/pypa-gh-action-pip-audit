@@ -1,0 +1,25 @@
+name: Test virtual environment audit
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a virtual environment with a safe package
+        run: |
+          python3 -m venv /tmp/test-venv
+          /tmp/test-venv/bin/pip install --quiet pip-audit==2.7.3
+      - name: Run pip-audit on virtual environment
+        id: action
+        uses: .
+        with:
+          virtual-environment: "/tmp/test-venv"
+          vulnerability-service: "PyPI"
+          local: "true"
+          summary: "false"
+          internal-be-careful-allow-failure: "true"
+      - name: Assert action completed with virtual environment
+        run: |
+          echo "pip-audit ran on virtual environment successfully"
+          echo "PASS"

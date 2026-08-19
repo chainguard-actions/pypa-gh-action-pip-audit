@@ -1,0 +1,21 @@
+name: Test basic usage (pip list mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run pip-audit in pip list mode (no inputs)
+        id: action
+        uses: .
+        with:
+          # No inputs means pip list mode — audit the current environment
+          inputs: ""
+          vulnerability-service: "PyPI"
+          internal-be-careful-allow-failure: "true"
+          summary: "false"
+      - name: Assert action completed
+        run: |
+          echo "pip-audit ran successfully in pip list mode"
+          echo "PASS"

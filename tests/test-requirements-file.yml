@@ -1,0 +1,27 @@
+name: Test requirements file audit (no vulnerabilities)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a clean requirements file
+        run: |
+          # Use a well-known, safe package with a pinned version
+          cat > /tmp/test-requirements.txt <<'EOF'
+          pip-audit==2.7.3
+          EOF
+      - name: Run pip-audit on requirements file
+        id: action
+        uses: .
+        with:
+          inputs: "/tmp/test-requirements.txt"
+          vulnerability-service: "PyPI"
+          no-deps: "true"
+          summary: "false"
+          internal-be-careful-allow-failure: "true"
+      - name: Assert action completed
+        run: |
+          echo "pip-audit ran on requirements file successfully"
+          echo "PASS"

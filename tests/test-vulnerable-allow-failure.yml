@@ -1,0 +1,34 @@
+name: Test vulnerable requirements with allow-failure
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create vulnerable requirements file
+        run: |
+          echo "pyyaml==5.1" > /tmp/test-vulnerable.txt
+
+      - id: action
+        uses: .
+        with:
+          inputs: "/tmp/test-vulnerable.txt"
+          no-deps: "true"
+          summary: "false"
+          vulnerability-service: "PyPI"
+          internal-be-careful-allow-failure: "true"
+
+      - name: Assert output is set (base64 encoded)
+        env:
+          ACTUAL: ${{ steps.action.outputs.internal-be-careful-output }}
+        run: |
+          echo "actual output (base64): $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected output to be set when vulnerabilities are found"
+            exit 1
+          fi
+          DECODED=$(echo "$ACTUAL" | base64 -d)
+          echo "decoded output: $DECODED"
+          echo "PASS: output is set and non-empty"

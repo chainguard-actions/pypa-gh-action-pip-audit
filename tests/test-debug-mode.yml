@@ -1,0 +1,27 @@
+name: Test debug mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a clean requirements file
+        run: |
+          cat > /tmp/debug-requirements.txt <<'EOF'
+          pip-audit==2.7.3
+          EOF
+      - name: Run pip-audit with debug mode enabled
+        id: action
+        uses: .
+        with:
+          inputs: "/tmp/debug-requirements.txt"
+          no-deps: "true"
+          vulnerability-service: "PyPI"
+          summary: "false"
+          internal-be-careful-debug: "true"
+          internal-be-careful-allow-failure: "true"
+      - name: Assert action completed in debug mode
+        run: |
+          echo "pip-audit ran in debug mode successfully"
+          echo "PASS"

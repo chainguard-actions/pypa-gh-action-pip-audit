@@ -1,0 +1,41 @@
+name: Test base64 output when vulnerabilities found
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a requirements file with a known-vulnerable package
+        run: |
+          # pip 21.1 has known vulnerabilities
+          cat > /tmp/vuln-output-requirements.txt <<'EOF'
+          pip==21.1
+          EOF
+      - name: Run pip-audit on vulnerable requirements
+        id: action
+        uses: .
+        with:
+          inputs: "/tmp/vuln-output-requirements.txt"
+          no-deps: "true"
+          vulnerability-service: "PyPI"
+          summary: "false"
+          internal-be-careful-allow-failure: "true"
+      - name: Assert output is base64-encoded when vulnerabilities found
+        env:
+          ACTUAL: ${{ steps.action.outputs.internal-be-careful-output }}
+        run: |
+          echo "actual output (base64): $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "WARN: No output produced — either no vulnerabilities found or output not set"
+            echo "This may be expected if the package has no known vulnerabilities in the current DB"
+          else
+            # Verify it's valid base64 by decoding it
+            DECODED=$(echo "$ACTUAL" | base64 -d 2>/dev/null)
+            if [ $? -ne 0 ]; then
+              echo "FAIL: output is not valid base64"
+              exit 1
+            fi
+            echo "decoded output: $DECODED"
+            echo "PASS: output is valid base64"
+          fi

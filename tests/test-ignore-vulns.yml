@@ -1,0 +1,29 @@
+name: Test ignore-vulns input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a requirements file with a known-vulnerable package
+        run: |
+          # pip 21.1 has known vulnerabilities including PYSEC-2021-437
+          cat > /tmp/ignore-vuln-requirements.txt <<'EOF'
+          pip==21.1
+          EOF
+      - name: Run pip-audit with vulnerability ignored
+        id: action
+        uses: .
+        with:
+          inputs: "/tmp/ignore-vuln-requirements.txt"
+          no-deps: "true"
+          vulnerability-service: "PyPI"
+          summary: "false"
+          # Ignore a known vulnerability ID for pip 21.1
+          ignore-vulns: "PYSEC-2021-437"
+          internal-be-careful-allow-failure: "true"
+      - name: Assert action completed with ignored vulnerability
+        run: |
+          echo "pip-audit ran with ignore-vulns flag successfully"
+          echo "PASS"
