@@ -1,0 +1,33 @@
+name: Test pip-audit with vulnerable requirements (allow failure)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          # pyyaml==5.1 is known to be vulnerable
+          inputs: "${{ github.workspace }}/test/vulnerable.txt"
+          no-deps: "true"
+          # Allow failure so the workflow step doesn't fail
+          internal-be-careful-allow-failure: "true"
+      - name: Assert output is base64-encoded when vulnerabilities found
+        env:
+          ACTUAL: ${{ steps.action.outputs.internal-be-careful-output }}
+        run: |
+          echo "output: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: expected base64 output when vulnerabilities are found"
+            exit 1
+          fi
+          # Verify it's valid base64 by decoding it
+          decoded=$(echo "$ACTUAL" | base64 -d 2>/dev/null)
+          if [ $? -ne 0 ]; then
+            echo "FAIL: output is not valid base64"
+            exit 1
+          fi
+          echo "decoded output: $decoded"
+          echo "PASS"

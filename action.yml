@@ -88,7 +88,7 @@ runs:
         # NOTE: Sourced, not executed as a script.
         source "${GHA_ACTION_PATH}/setup/venv.bash"
 
-        python "${GHA_ACTION_PATH}/action.py" ${GHA_PIP_AUDIT_INPUTS:+"$GHA_PIP_AUDIT_INPUTS"}
+        python "${GHA_ACTION_PATH}/action.py"
       env:
         GHA_ACTION_PATH: "${{ github.action_path }}"
         GHA_PIP_AUDIT_INPUTS: "${{ inputs.inputs }}"
