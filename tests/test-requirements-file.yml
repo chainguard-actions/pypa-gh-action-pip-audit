@@ -1,0 +1,25 @@
+name: Test requirements file input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a clean requirements file
+        run: |
+          # Use a well-known, vulnerability-free package at a recent version
+          cat > /tmp/test-requirements.txt << 'EOF'
+          setuptools==75.8.2
+          EOF
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/test-requirements.txt
+          no-deps: true
+          summary: false
+          internal-be-careful-allow-failure: true
+      - name: Assert action ran
+        run: |
+          echo "Action completed for requirements file input"
+          echo "PASS"

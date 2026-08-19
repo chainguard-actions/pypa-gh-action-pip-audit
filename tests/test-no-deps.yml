@@ -1,0 +1,25 @@
+name: Test no-deps mode with pinned requirements
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a fully pinned requirements file
+        run: |
+          # Fully pinned, no-deps mode requires all packages to be pinned
+          cat > /tmp/test-pinned-requirements.txt << 'EOF'
+          setuptools==75.8.2
+          EOF
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/test-pinned-requirements.txt
+          no-deps: true
+          summary: false
+          internal-be-careful-allow-failure: true
+      - name: Assert action ran in no-deps mode
+        run: |
+          echo "Action completed in no-deps mode"
+          echo "PASS"

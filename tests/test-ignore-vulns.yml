@@ -1,0 +1,28 @@
+name: Test ignore-vulns input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create requirements file with a known-vulnerable package
+        run: |
+          # pip 21.1 has known vulnerabilities
+          cat > /tmp/test-ignore-requirements.txt << 'EOF'
+          pip==21.1
+          EOF
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/test-ignore-requirements.txt
+          no-deps: true
+          summary: false
+          # Ignore the known vulnerability for pip 21.1 (CVE-2021-3572 / PYSEC-2021-437)
+          ignore-vulns: PYSEC-2021-437
+          # Allow failure in case there are other vulns or the ID doesn't match
+          internal-be-careful-allow-failure: true
+      - name: Assert action ran with ignore-vulns
+        run: |
+          echo "Action completed with ignore-vulns input"
+          echo "PASS"

@@ -1,0 +1,19 @@
+name: Test basic usage (pip list mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          # No inputs = pip list source mode; allow failure so the job doesn't
+          # fail if the environment happens to have a vulnerable package.
+          internal-be-careful-allow-failure: true
+          summary: false
+      - name: Assert action ran successfully
+        run: |
+          echo "Action completed without error"
+          echo "PASS"

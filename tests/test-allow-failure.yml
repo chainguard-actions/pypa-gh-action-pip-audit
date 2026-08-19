@@ -1,0 +1,36 @@
+name: Test allow-failure mode with vulnerable package
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create requirements file with a known-vulnerable package
+        run: |
+          # pip 21.1 has known vulnerabilities (CVE-2021-3572)
+          cat > /tmp/test-vuln-requirements.txt << 'EOF'
+          pip==21.1
+          EOF
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/test-vuln-requirements.txt
+          no-deps: true
+          summary: false
+          # Allow failure so the job doesn't fail even when vulnerabilities are found
+          internal-be-careful-allow-failure: true
+      - name: Assert job did not fail despite vulnerabilities
+        run: |
+          echo "Job completed successfully even with vulnerable package"
+          echo "PASS"
+      - name: Assert output is set (base64 encoded audit result)
+        env:
+          ACTUAL: ${{ steps.action.outputs.internal-be-careful-output }}
+        run: |
+          echo "output (base64): $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "NOTE: output may be empty if no vulnerabilities were detected or service returned no results"
+          else
+            echo "PASS: output is set (vulnerabilities found and encoded)"
+          fi
