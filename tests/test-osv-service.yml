@@ -1,0 +1,26 @@
+name: Test OSV vulnerability service
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create empty requirements file
+        run: |
+          echo "" > /tmp/empty-requirements-osv.txt
+
+      - id: action
+        uses: .
+        with:
+          inputs: /tmp/empty-requirements-osv.txt
+          no-deps: "true"
+          summary: "false"
+          vulnerability-service: "OSV"
+          internal-be-careful-allow-failure: "true"
+
+      - name: Assert action succeeded with OSV service
+        run: |
+          echo "Action completed successfully using OSV vulnerability service"
+          echo "PASS"

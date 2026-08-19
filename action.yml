@@ -77,20 +77,20 @@ runs:
     - name: Set up pip-audit
       run: |
         # NOTE: Sourced, not executed as a script.
-        source "${ACTION_PATH}/setup/setup.bash"
+        source "${GHA_ACTION_PATH}/setup/setup.bash"
       env:
-        ACTION_PATH: ${{ github.action_path }}
+        GHA_ACTION_PATH: "${{ github.action_path }}"
         GHA_PIP_AUDIT_VIRTUAL_ENVIRONMENT: "${{ inputs.virtual-environment }}"
       shell: bash
     - name: Run pip-audit
       id: pip-audit
       run: |
         # NOTE: Sourced, not executed as a script.
-        source "${ACTION_PATH}/setup/venv.bash"
+        source "${GHA_ACTION_PATH}/setup/venv.bash"
 
-        "${ACTION_PATH}/action.py" ${GHA_PIP_AUDIT_INPUTS:+"$GHA_PIP_AUDIT_INPUTS"}
+        "${GHA_ACTION_PATH}/action.py" "$GHA_PIP_AUDIT_INPUTS"
       env:
-        ACTION_PATH: ${{ github.action_path }}
+        GHA_ACTION_PATH: "${{ github.action_path }}"
         GHA_PIP_AUDIT_INPUTS: "${{ inputs.inputs }}"
         GHA_PIP_AUDIT_SUMMARY: "${{ inputs.summary }}"
         GHA_PIP_AUDIT_NO_DEPS: "${{ inputs.no-deps }}"

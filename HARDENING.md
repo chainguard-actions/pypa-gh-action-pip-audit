@@ -8,28 +8,21 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **pypa--gh-action-pip-audit/v1.0.7** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **pypa--gh-action-pip-audit/v1.0.7** was hardened automatically. 2 finding(s) were identified and resolved across 2 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (a): The 'Set up pip-audit' step in action.yml directly interpolates the GitHub Actions expression `${{ github.action_path }}` inside the `run:` shell command: `source "${{ github.action_path }}/setup/setup.bash"`. Any `${{ ... }}` expression interpolated directly into a `run:` block is a script-injection risk because the value is substituted into the shell command string before the shell parses it.
+Sub-rule (a): Direct expression interpolation of ${{ }} inside run: shell command strings. In the 'Run pip-audit' step (line 71), the attacker-controlled input `${{ inputs.inputs }}` is interpolated directly into the shell command: `${{ github.action_path }}/action.py "${{ inputs.inputs }}"`. An attacker can supply a value like `foo; malicious-command` to execute arbitrary shell commands. Additionally, `${{ github.action_path }}` is interpolated directly in run: blocks in both steps (lines 63, 69, 71) — any ${{ }} expression inside a run: block is a script-injection risk regardless of context. The fix is to route all values through env: variables and reference them as quoted shell variables (e.g., `"$GHA_PIP_AUDIT_INPUTS"`).
 
 Locations:
 
 - `action.yml:63`
-
-### script-injection (severity: high)
-
-Sub-rule (a): The 'Run pip-audit' step in action.yml directly interpolates two GitHub Actions expressions inside the `run:` shell command block: (1) `source "${{ github.action_path }}/setup/venv.bash"` and (2) `${{ github.action_path }}/action.py "${{ inputs.inputs }}"`. The `inputs.inputs` value is attacker-controlled (it is a user-supplied action input with `required: false`) and is passed directly as a shell argument without being routed through an `env:` variable. An attacker can inject arbitrary shell metacharacters via this input.
-
-Locations:
-
+- `action.yml:69`
 - `action.yml:71`
-- `action.yml:73`
 
 ### static-inline-injection (severity: high)
 
@@ -47,7 +40,21 @@ Locations:
 
 **Notes:**
 
-Fixed all three script-injection findings in action.yml:
-1. 'Set up pip-audit' step (line 63): Moved `${{ github.action_path }}` out of the run: block into an env: variable `ACTION_PATH`, then referenced it as `${ACTION_PATH}` in the shell script.
-2. 'Run pip-audit' step (lines 71, 73, 74): Moved `${{ github.action_path }}` to `ACTION_PATH` env var and `${{ inputs.inputs }}` (attacker-controlled optional input) to `GHA_PIP_AUDIT_INPUTS` env var. Used `${GHA_PIP_AUDIT_INPUTS:+"$GHA_PIP_AUDIT_INPUTS"}` for the optional positional argument to avoid passing an empty string argument when the input is absent. All ${{ }} expressions now appear only in env: blocks, not in run: shell strings.
+Fixed all ${{ }} expression interpolations in run: blocks by moving them to env: variables:
+1. 'Set up pip-audit' step: moved ${{ github.action_path }} to env: GHA_ACTION_PATH, referenced as ${GHA_ACTION_PATH} in shell.
+2. 'Run pip-audit' step: moved ${{ github.action_path }} to env: GHA_ACTION_PATH and ${{ inputs.inputs }} to env: GHA_PIP_AUDIT_INPUTS. The inputs value is passed as a single quoted argument "$GHA_PIP_AUDIT_INPUTS" to action.py, which uses sys.argv[1].split() to parse the whitespace-separated list — preserving original behavior while eliminating shell injection risk.
+
+### Iteration 2
+
+**Fixes applied:** unpinned-uses, missing-permissions
+
+**Notes:**
+
+Fixed all three workflow files:
+
+1. **unpinned-uses**: Pinned all mutable tag references to full 40-char SHAs:
+   - `actions/checkout@v3` → `actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3` (applied in ci.yml, selftest.yml x5, semgrep.yml)
+   - `actions/setup-python@v4` → `actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4` (applied in ci.yml)
+
+2. **missing-permissions**: Added `permissions: {}` at the top level of all three workflow files (deny-all default), and added `permissions: { contents: read }` at the job level for each job that needs to check out code.
 
