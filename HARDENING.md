@@ -4,61 +4,32 @@
 
 > This file was generated automatically by the hardening agent.
 
-**Policy SHA:** `d636be7e43ef829af6e853da6b3c7566db9f72fe`
+**Policy SHA:** `374911c4be584df24e6da57af2d990570ef0f859`
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
 **Harden Agent Version:** `2`
 
-Action **pypa--gh-action-pip-audit/v1.0.8** was hardened automatically. 4 finding(s) were identified and resolved across 1 iteration(s).
+Action **pypa--gh-action-pip-audit/v1.0.8** was hardened automatically. 5 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Sub-rule (a): GitHub Actions expressions are interpolated directly inside `run:` shell command strings in action.yml. In the 'Set up pip-audit' step, `${{ github.action_path }}` is embedded directly in the shell command `source "${{ github.action_path }}/setup/setup.bash"`. In the 'Run pip-audit' step, both `${{ github.action_path }}` and `${{ inputs.inputs }}` are embedded directly in shell commands: `source "${{ github.action_path }}/setup/venv.bash"` and `${{ github.action_path }}/action.py "${{ inputs.inputs }}"`.
-
-The `inputs.inputs` value is fully attacker-controlled (it is a user-supplied input with no sanitization) and is interpolated directly into the shell command line before the shell ever sees it, enabling command injection. Even `github.action_path` and `github.*` context values should not be interpolated directly into `run:` blocks — they must be passed via `env:` variables and then referenced as shell variables.
+Rule (a): the 'Set up pip-audit' step puts a GitHub expression straight into its run: script: `source "${{ github.action_path }}/setup/setup.bash"`. Use the $GITHUB_ACTION_PATH env var instead: `source "$GITHUB_ACTION_PATH/setup/setup.bash"`.
 
 Locations:
 
-- `action.yml:57`
-- `action.yml:64`
-- `action.yml:66`
+- `action.yml:63`
 
-### unpinned-uses (severity: high)
+### script-injection (severity: high)
 
-All `uses:` references in the workflow files use mutable tag refs instead of full 40-character commit SHA digests, making them vulnerable to supply-chain attacks if the referenced tag is moved or the upstream repository is compromised.
-
-Failing references:
-- `.github/workflows/ci.yml`: `actions/checkout@v3`, `actions/setup-python@v4`
-- `.github/workflows/selftest.yml`: `actions/checkout@v3` (used in multiple jobs)
-- `.github/workflows/semgrep.yml`: `actions/checkout@v3`
-
-All should be pinned to their full 40-character SHA, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v3`.
+Rule (a): the 'Run pip-audit' step puts GitHub expressions straight into its run: script: `source "${{ github.action_path }}/setup/venv.bash"` and `${{ github.action_path }}/action.py "${{ inputs.inputs }}"`. inputs.inputs can be set by whoever calls the action, and it is substituted into the script before the shell parses it. Pass it through an env var (e.g. GHA_PIP_AUDIT_INPUTS: ${{ inputs.inputs }}) and refer to it as "$GHA_PIP_AUDIT_INPUTS". Use "$GITHUB_ACTION_PATH" for the action path.
 
 Locations:
 
-- `.github/workflows/ci.yml:12`
-- `.github/workflows/ci.yml:13`
-- `.github/workflows/selftest.yml:10`
-- `.github/workflows/selftest.yml:24`
-- `.github/workflows/selftest.yml:38`
-- `.github/workflows/selftest.yml:55`
-- `.github/workflows/selftest.yml:68`
-- `.github/workflows/semgrep.yml:17`
-
-### missing-permissions (severity: medium)
-
-None of the three workflow files define a top-level `permissions:` key, and no individual job within any of these files defines a `permissions:` key either. Without explicit permissions, workflows run with the default repository permissions (which may include `write` access to contents, pull requests, etc.), violating the principle of least privilege.
-
-Affected files: `.github/workflows/ci.yml`, `.github/workflows/selftest.yml`, `.github/workflows/semgrep.yml`.
-
-Locations:
-
-- `.github/workflows/ci.yml:1`
-- `.github/workflows/selftest.yml:1`
-- `.github/workflows/semgrep.yml:1`
+- `action.yml:72`
+- `action.yml:74`
 
 ### static-inline-injection (severity: high)
 
@@ -68,13 +39,81 @@ Locations:
 
 - `action.yml:74`
 
+### prior-fix (severity: high)
+
+Carried forward from this version's previous harden, which fixed it; fix it again unless the code no longer has the problem. The previous harden changed action.py without recording a finding for it, and this analysis reported nothing there. Re-apply its security changes unless the code no longer needs them. The previous patch:
+```diff
+diff --git a/action.py b/action.py
+index dd624ad..a0a4748 100755
+--- a/action.py
++++ b/action.py
+@@ -49,7 +49,7 @@ def _fatal_help(msg):
+     sys.exit(1)
+ 
+ 
+-inputs = [Path(p).resolve() for p in sys.argv[1].split()]
++inputs = [Path(p).resolve() for p in os.getenv("GHA_PIP_AUDIT_INPUTS", "").split()]
+ 
+ # The arguments we pass into `pip-audit` get built up in this list.
+ pip_audit_args = [
+
+```
+
+Locations:
+
+- `action.py`
+
+### prior-fix (severity: high)
+
+Carried forward from this version's previous harden, which fixed it; fix it again unless the code no longer has the problem. The previous harden changed action.yml without recording a finding for it, and this analysis reported nothing there. Re-apply its security changes unless the code no longer needs them. The previous patch:
+```diff
+diff --git a/action.yml b/action.yml
+index 39e9d3d..aef2af4 100644
+--- a/action.yml
++++ b/action.yml
+@@ -57,22 +57,41 @@ outputs:
+ runs:
+   using: "composite"
+   steps:
+     - name: Set up pip-audit
+       run: |
+         # NOTE: Sourced, not executed as a script.
+-        source "${{ github.action_path }}/setup/setup.bash"
++        source "${GHA_ACTION_PATH}/setup/setup.bash"
+       env:
++        GHA_ACTION_PATH: "${{ github.action_path }}"
+         GHA_PIP_AUDIT_VIRTUAL_ENVIRONMENT: "${{ inputs.virtual-environment }}"
+       shell: bash
+-
+     - name: Run pip-audit
+       id: pip-audit
+       run: |
+         # NOTE: Sourced, not executed as a script.
+-        source "${{ github.action_path }}/setup/venv.bash"
++        source "${GHA_ACTION_PATH}/setup/venv.bash"
+ 
+-        ${{ github.action_path }}/action.py "${{ inputs.inputs }}"
++        "${GHA_ACTION_PATH}/action.py"
+       env:
++        GHA_ACTION_PATH: "${{ github.action_path }}"
++        GHA_PIP_AUDIT_INPUTS: "${{ inputs.inputs }}"
+         GHA_PIP_AUDIT_SUMMARY: "${{ inputs.summary }}"
+         GHA_PIP_AUDIT_NO_DEPS: "${{ inputs.no-deps }}"
+         GHA_PIP_AUDIT_REQUIRE_HASHES: "${{ inputs.require-hashes }}"
+
+```
+
+Locations:
+
+- `action.yml`
+
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, static-inline-injection, unpinned-uses, missing-permissions
+**Fixes applied:** script-injection, static-inline-injection, prior-fix
 
 **Notes:**
 
-Fixed script injection in action.yml by moving github.action_path to GHA_ACTION_PATH env var in both steps, and inputs.inputs to GHA_PIP_AUDIT_INPUTS env var. Updated action.py to read inputs from os.getenv('GHA_PIP_AUDIT_INPUTS', '') instead of sys.argv[1]. Pinned all unpinned uses: references to full 40-char SHAs (actions/checkout@v3 -> a37ce9120846195fa4ece8f58b268e6043cb2f26, actions/setup-python@v4 -> 7f4fc3e22c37d6ff65e88745f38bd3157c663f7c). Added permissions: contents: read to all three workflow files (ci.yml, selftest.yml, semgrep.yml).
+action.yml no longer has any ${{ }} expressions inside run: scripts. Both steps now find the action's files through the runner-provided $GITHUB_ACTION_PATH (quoted) instead of ${{ github.action_path }}. inputs.inputs now goes in through the env var GHA_PIP_AUDIT_INPUTS. action.py reads it with os.getenv("GHA_PIP_AUDIT_INPUTS", "").split() instead of sys.argv[1].split(), which is the same change the previous harden made (both prior-fix patches are re-applied). The value is still split on whitespace in Python, as upstream did, so the list behaves the same. Nothing was run or tested.
 
